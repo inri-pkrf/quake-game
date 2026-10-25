@@ -1,65 +1,74 @@
-import React from 'react';
-const Dust = () => <>{Array.from({length:26}).map((_,i)=><i key={i} className="dust" style={{left:(i*37%100)+'%',animationDelay:(i%9)*-1.3+'s',animationDuration:6+(i%7)+'s',width:2+(i%4),height:2+(i%4)}}/>)}</>;
-export default function Scene({kind,shake,risk}) {
-  const dark = Math.min(.55, risk/180);
+import React, { useEffect, useRef } from 'react';
+const B = process.env.PUBLIC_URL + '/img/';
+const I=(k,l)=>Object.fromEntries(l.map(s=>[s,B+k+'_'+s+'.jpg']));
+export const IMG = {
+  office:I('office',['before','mid','during','after','medic']),
+  corridor:I('corridor',['before','mid','after']),
+  stairs:I('stairs',['before','mid','debris','after']),
+  outside:I('outside',['before','mid','after','gather','count','missing']),
+  garage:I('garage',['before','mid','after']),
+  elevator:I('elevator',['before','after'])};
+const POS = {office_before:'60% 50%',office_mid:'40% 50%',office_during:'38% 50%',office_after:'46% 50%',office_medic:'55% 50%',outside_before:'64% 50%',outside_mid:'64% 50%',outside_after:'62% 50%',outside_gather:'50% 50%',outside_count:'62% 50%',outside_missing:'70% 50%'};
+export const project=(kind,stage,u,v)=>{
+  const eff=IMG[kind][stage]?stage:'after', [px,py]=(POS[kind+'_'+eff]||'50% 50%').split(' ').map(x=>parseFloat(x)/100);
+  const r=(kind==='stairs'||kind==='elevator')?2/3:1.5, cw=1080*1.12, ch=910*1.12, sc=Math.max(cw/r,ch), w=r*sc, h=sc;
+  const xc=-64.8+(cw-w)*px+u*w, yc=-54.6+(ch-h)*py+v*h;
+  return {x:Math.max(70,Math.min(1010,540+(xc-540)*1.1)), y:Math.max(70,Math.min(840,455+(yc-455)*1.1))};
+};
+const R = (a,b)=>a+Math.random()*(b-a);
+
+export default function Scene({kind,stage,lvl,fade=.5,full}) {
+  const cam=useRef(), cv=useRef(), flk=useRef(), L=useRef(lvl), ST=useRef(stage), K=useRef(kind);
+  L.current=lvl; ST.current=stage; K.current=kind;
+  useEffect(()=>{
+    const g=cv.current.getContext('2d'); const P=[]; const acc={}; let raf, last=performance.now(), t0=last, amp=0, ramp=0, nextImp=0, flkUntil=0; const imp={x:0,y:0,r:0};
+    const rate={dust:[0,40,120,300],puff:[0,.3,1.2,3.5],glint:[0,0,4,12]};
+    const spawn=(t)=>{
+      if(P.length>420)return; const out=K.current==='outside';
+      if(t==='dust'){const f=Math.random()<.35;P.push({t,x:R(0,1080),y:-10,vx:R(-25,25),vy:f?R(250,550):R(30,130),r:f?R(.8,1.8):R(1,3.6),a:R(.25,.6),life:R(8,14)});}
+      if(t==='chunk')P.push({t,x:R(0,1080),y:-30,vx:R(-60,60),vy:R(100,500),g:1500,w:R(5,out?14:26),h:R(4,16),rot:R(0,6),vr:R(-9,9),c:['#cfcabd','#8f8b82','#e8e4d8','#5b5851'][(Math.random()*4)|0],life:6});
+      if(t==='paper'&&!out)P.push({t,x:R(60,1020),y:-30,vx:R(-90,90),vy:R(110,260),w:22,h:30,rot:R(0,6),vr:R(-5,5),life:9});
+      if(t==='tile'&&!out)P.push({t,x:R(60,1020),y:-90,vx:R(-30,30),vy:R(200,400),g:1600,w:R(90,150),h:R(55,80),rot:0,vr:R(-3,3),life:3});
+      if(t==='puff')P.push({t,x:R(0,1080),y:R(1300,1950),vx:R(-20,20),vy:R(-70,-30),r:R(160,320),a:R(.18,.34),life:R(3,5.5),l0:5});
+      if(t==='glint'&&!out)P.push({t,x:R(0,1080),y:R(-20,900),vx:R(-80,80),vy:R(400,900),g:900,life:R(.25,.6),l0:.5});
+    };
+    const loop=(now)=>{
+      const dt=Math.min(.05,(now-last)/1000); last=now; const t=(now-t0)/1000, l=L.current, w=2*Math.PI;
+      amp+=([0,5,16,38][l]-amp)*.04; ramp+=([0,.12,.4,1][l]-ramp)*.04;
+      if(l>=2&&now>nextImp){imp.x=R(-1.2,1.2)*amp;imp.y=R(-.9,.9)*amp;imp.r=R(-1.2,1.2)*ramp;nextImp=now+(l===3?90:180)+R(0,120);}
+      imp.x*=.86;imp.y*=.86;imp.r*=.86;
+      const sx=amp*(Math.sin(t*w*7.3)*.6+Math.sin(t*w*11.1+1)*.4)+imp.x, sy=amp*.7*(Math.sin(t*w*8.7+2)*.6+Math.sin(t*w*13.3)*.4)+imp.y, sr=ramp*Math.sin(t*w*5.1)*.7+imp.r;
+      cam.current.style.transform=`translate(${sx+Math.sin(t*.35)*9}px,${sy+Math.cos(t*.27)*7}px) rotate(${sr}deg) scale(${1.1+.02*Math.sin(t*.2)+amp/900})`;
+      cam.current.style.filter=amp>12?`blur(${(amp/38*1.8).toFixed(2)}px)`:'none';
+      if(l>=1&&now>flkUntil&&Math.random()<(l>=2?.05:.01))flkUntil=now+60+R(0,140);
+      flk.current.style.opacity=now<flkUntil?(.3+Math.random()*.5):0;
+      const calm=ST.current==='before'&&l===0;
+      Object.keys(rate).forEach(k=>{ let r=rate[k][l]; if(k==='dust'&&l===0)r=calm?0:6; if(l===0&&calm)r=0; acc[k]=(acc[k]||0)+r*dt; while(acc[k]>=1){acc[k]--;spawn(k);} });
+      g.clearRect(0,0,1080,1920);
+      for(let i=P.length-1;i>=0;i--){const p=P[i]; p.life-=dt; if(p.g)p.vy+=p.g*dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.rot+=(p.vr||0)*dt;
+        if(p.life<=0||p.y>2000){P.splice(i,1);continue;}
+        if(p.t==='dust'){g.fillStyle=`rgba(232,222,200,${p.a})`;g.beginPath();g.arc(p.x,p.y,p.r,0,w);g.fill();}
+        else if(p.t==='puff'){const a=p.a*Math.min(1,p.life/p.l0*2),rr=p.r*(1+(p.l0-p.life)*.12),gr=g.createRadialGradient(p.x,p.y,0,p.x,p.y,rr);gr.addColorStop(0,`rgba(205,195,175,${a})`);gr.addColorStop(1,'rgba(205,195,175,0)');g.fillStyle=gr;g.fillRect(p.x-rr,p.y-rr,rr*2,rr*2);}
+        else if(p.t==='glint'){g.strokeStyle=`rgba(210,230,255,${Math.min(1,p.life/p.l0)})`;g.lineWidth=2;g.beginPath();g.moveTo(p.x,p.y);g.lineTo(p.x+p.vx*.025,p.y+p.vy*.025);g.stroke();}
+        else{g.save();g.translate(p.x,p.y);g.rotate(p.rot);
+          if(p.t==='paper'){g.scale(1,Math.abs(Math.cos(p.rot*1.3))+.05);p.vx=Math.sin(t*3+p.x)*80;g.fillStyle='#efede4';g.fillRect(-p.w/2,-p.h/2,p.w,p.h);}
+          else if(p.t==='tile'){g.fillStyle='#d6d4cb';g.strokeStyle='#8d8b83';g.lineWidth=3;g.fillRect(-p.w/2,-p.h/2,p.w,p.h);g.strokeRect(-p.w/2,-p.h/2,p.w,p.h);}
+          else{g.fillStyle=p.c;g.fillRect(-p.w/2,-p.h/2,p.w,p.h);}
+          g.restore();}
+      }
+      raf=requestAnimationFrame(loop);
+    };
+    raf=requestAnimationFrame(loop); return()=>cancelAnimationFrame(raf);
+  },[]);
+  const eff=IMG[kind][stage]?stage:'after';
   return (
-  <div className={'scene shake'+shake}>
-   <svg viewBox="0 0 1080 900" preserveAspectRatio="xMidYMid slice">
-    <defs>
-     <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#8a8d90"/><stop offset="1" stopColor="#5d6063"/></linearGradient>
-     <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3b3d40"/><stop offset="1" stopColor="#1a1b1d"/></linearGradient>
-     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3a5a80"/><stop offset=".6" stopColor="#d79b6b"/><stop offset="1" stopColor="#e8c08a"/></linearGradient>
-     <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#9fc4e6" stopOpacity=".7"/><stop offset="1" stopColor="#2b4d70" stopOpacity=".9"/></linearGradient>
-     <radialGradient id="lamp"><stop offset="0" stopColor="#fff7d6" stopOpacity=".9"/><stop offset="1" stopColor="#fff7d6" stopOpacity="0"/></radialGradient>
-     <filter id="rough"><feTurbulence baseFrequency=".9" numOctaves="2" seed="4"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .22 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>
-     <filter id="blur"><feGaussianBlur stdDeviation="6"/></filter>
-    </defs>
-    {kind==='office' && <g>
-      <rect width="1080" height="900" fill="url(#wall)"/>
-      <rect y="0" width="1080" height="110" fill="#c9cbcc"/>
-      {[0,1,2].map(i=><g key={i}><rect x={120+i*340} y="40" width="260" height="26" fill="#f3f1e6"/><ellipse className={i===1?'flick':''} cx={250+i*340} cy="150" rx="230" ry="110" fill="url(#lamp)" opacity=".55"/></g>)}
-      <rect x="60" y="150" width="520" height="360" fill="url(#sky)"/><rect x="60" y="150" width="520" height="360" fill="url(#glass)"/>
-      {[0,1,2,3,4,5].map(i=><rect key={i} x={80+i*80} y={400-((i*53)%140)} width="55" height={110+((i*53)%140)} fill="#2a3340" opacity=".85"/>)}
-      <path d="M320 150 L350 260 L310 330 L340 420 L320 510" stroke="#111" strokeWidth="3" fill="none" opacity=".7"/>
-      <path d="M60 150h520M320 150v360M60 330h520" stroke="#2c2f32" strokeWidth="10"/>
-      <rect x="640" y="150" width="330" height="360" fill="#6e7174"/><rect x="660" y="170" width="290" height="320" fill="#d6d2c4" opacity=".85"/>
-      <path d="M700 190l60 70 -20 40 50 60M900 400l-40 -70" stroke="#3a3a3a" strokeWidth="3" fill="none"/>
-      <rect y="560" width="1080" height="340" fill="url(#floor)"/>
-      <path d="M0 620H1080M0 720H1080M0 840H1080" stroke="#000" opacity=".3"/>
-      {[[80,600],[560,640]].map(([x,y],i)=><g key={i}><rect x={x} y={y} width="440" height="30" fill="#7b5a3c"/><rect x={x+20} y={y+30} width="14" height="190" fill="#222"/><rect x={x+406} y={y+30} width="14" height="190" fill="#222"/><rect x={x+130} y={y-150} width="170" height="120" rx="8" fill="#15191e"/><rect x={x+140} y={y-140} width="150" height="100" fill="#3b5d7f" opacity=".75"/><rect x={x+205} y={y-30} width="20" height="30" fill="#222"/></g>)}
-      <g transform="rotate(-18 820 780)"><rect x="740" y="740" width="160" height="90" fill="#2a2d31"/></g>
-      <path d="M200 110l90 0 20 60-110 0z" fill="#b8b6ac" opacity=".9"/>
-    </g>}
-    {kind==='corridor' && <g>
-      <rect width="1080" height="900" fill="#26282a"/>
-      <polygon points="0,0 1080,0 700,300 380,300" fill="#aaa" /><polygon points="0,0 380,300 380,620 0,900" fill="url(#wall)"/>
-      <polygon points="1080,0 700,300 700,620 1080,900" fill="url(#wall)" opacity=".85"/><polygon points="0,900 380,620 700,620 1080,900" fill="url(#floor)"/>
-      <rect x="380" y="300" width="320" height="320" fill="#0d0e0f"/>
-      <rect x="480" y="330" width="120" height="50" fill="#18c76b" /><path d="M495 355h70M545 340l20 15-20 15" stroke="#fff" strokeWidth="6" fill="none"/>
-      <ellipse cx="540" cy="620" rx="200" ry="26" fill="#18c76b" opacity=".25"/>
-      <polygon points="140,170 330,300 330,560 140,640" fill="#4d4f52" stroke="#222"/><polygon points="800,300 960,180 960,640 800,560" fill="#4d4f52" stroke="#222"/>
-      <polygon points="460,110 640,110 620,60 480,60" fill="#d5d3c9"/>
-      <path d="M620 300 600 360 650 420" stroke="#111" strokeWidth="3" fill="none"/>
-    </g>}
-    {kind==='stairs' && <g>
-      <rect width="1080" height="900" fill="#2a2c2e"/><rect width="1080" height="900" fill="url(#wall)" opacity=".6"/>
-      {Array.from({length:12}).map((_,i)=><g key={i}><polygon points={`${80+i*70},${820-i*50} ${150+i*70},${820-i*50} ${150+i*70},${870-i*50} ${80+i*70},${870-i*50}`} fill={i%2?'#6a6d70':'#797c7f'}/></g>)}
-      <polygon points="80,860 920,260 920,300 80,900" fill="#222"/><path d="M80 780 920 180" stroke="#cfd1d2" strokeWidth="10"/>
-      <path d="M760 60 700 200 780 330 720 460 800 600" stroke="#0a0a0a" strokeWidth="6" fill="none"/>
-      <rect x="860" y="60" width="150" height="60" fill="#18c76b"/><rect x="480" y="20" width="200" height="20" fill="#fffbe0" className="flick"/>
-    </g>}
-    {kind==='outside' && <g>
-      <rect width="1080" height="900" fill="url(#sky)"/>
-      {[0,1,2,3,4,5,6,7].map(i=><rect key={i} x={i*140-20} y={260-((i*71)%170)} width="130" height={380+((i*71)%170)} fill={i%2?'#4a5360':'#3a424d'}/>)}
-      {Array.from({length:60}).map((_,i)=><rect key={i} x={(i*97)%1060} y={300+((i*61)%320)} width="14" height="18" fill="#f5d98f" opacity=".5"/>)}
-      <rect y="620" width="1080" height="280" fill="url(#floor)"/><path d="M0 700 1080 700M0 800H1080" stroke="#aaa" strokeDasharray="60 40" opacity=".4"/>
-      <ellipse cx="540" cy="640" rx="620" ry="90" fill="#caa57a" opacity=".35" filter="url(#blur)"/>
-      {[0,1,2,3,4,5,6].map(i=><g key={i} transform={`translate(${220+i*95},${690+(i%3)*30})`}><circle cy="-48" r="14" fill="#222"/><rect x="-14" y="-34" width="28" height="64" rx="10" fill={['#d8572a','#2d6cdf','#e0b43a','#aaa'][i%4]}/></g>)}
-    </g>}
-    <rect width="1080" height="900" filter="url(#rough)" opacity=".7"/>
-    <rect width="1080" height="900" fill="#000" opacity={dark}/>
-    {shake>=2 && <rect width="1080" height="900" fill="#ff3b1d" opacity=".06" className="flick"/>}
-   </svg>
-   <Dust/><div className="vig"/>
+  <div className={'scene'+(full?' full':'')} style={{'--fade':fade+'s'}}>
+    <div className="cam" ref={cam}>
+      {Object.keys(IMG).flatMap(k=>Object.keys(IMG[k]).map(s=>
+        <img key={k+s} alt="" className={'layer'+(k===kind&&s===eff?' on':'')} src={IMG[k][s]} style={{objectPosition:POS[k+'_'+s]||'50% 50%'}}/>))}
+    </div>
+    <div className={'haze'+(eff==='before'?'':' show')}/>
+    <canvas ref={cv} width="1080" height="1920" className="fx"/>
+    <div className="flk" ref={flk}/><div className="vig"/><div className="grain"/>
   </div>);
 }
