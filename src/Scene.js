@@ -2,18 +2,24 @@ import React, { useEffect, useRef } from 'react';
 const B = process.env.PUBLIC_URL + '/img/';
 const I=(k,l)=>Object.fromEntries(l.map(s=>[s,B+k+'_'+s+'.jpg']));
 export const IMG = {
-  office:I('office',['before','mid','during','after','medic']),
+  office:I('office',['before','mid','during','strong','after','medic']),
   corridor:I('corridor',['before','mid','after']),
-  stairs:I('stairs',['before','mid','debris','after']),
-  outside:I('outside',['before','mid','after','gather','count','missing']),
-  garage:I('garage',['before','mid','after']),
+  stairs:I('stairs',['before','mid','after']),
+  outside:I('outside',['mid','after','rubble','gather','count','missing']),
+  garage:I('garage',['before','mid','debris','wall','after','collapse']),
   elevator:I('elevator',['before','after'])};
-const POS = {office_before:'60% 50%',office_mid:'40% 50%',office_during:'38% 50%',office_after:'46% 50%',office_medic:'55% 50%',outside_before:'64% 50%',outside_mid:'64% 50%',outside_after:'62% 50%',outside_gather:'50% 50%',outside_count:'62% 50%',outside_missing:'70% 50%'};
-export const project=(kind,stage,u,v)=>{
-  const eff=IMG[kind][stage]?stage:'after', [px,py]=(POS[kind+'_'+eff]||'50% 50%').split(' ').map(x=>parseFloat(x)/100);
-  const r=(kind==='stairs'||kind==='elevator')?2/3:1.5, cw=1080*1.12, ch=910*1.12, sc=Math.max(cw/r,ch), w=r*sc, h=sc;
-  const xc=-64.8+(cw-w)*px+u*w, yc=-54.6+(ch-h)*py+v*h;
-  return {x:Math.max(70,Math.min(1010,540+(xc-540)*1.1)), y:Math.max(70,Math.min(840,455+(yc-455)*1.1))};
+const POS = {};
+export const RATIOS = {};
+export const frameOf=(kind,stage,full)=>{
+  const url=IMG[kind][IMG[kind][stage]?stage:'after'], r=RATIOS[url]||.5625;
+  if(!full) return {top:0,h:910,r,url};
+  return r<.8?{top:0,h:1920,r,url}:{top:410,h:1100,r,url};
+};
+const cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+export const project=(kind,stage,u,v)=>{ // מיקום נקודה על המסך במצב הגדול
+  const F=frameOf(kind,stage,true), eff=IMG[kind][stage]?stage:'after', [px,py]=(POS[kind+'_'+eff]||'50% 50%').split(' ').map(x=>parseFloat(x)/100);
+  const s0=Math.max(1080/F.r,F.h), w=F.r*s0, h=s0, x=(1080-w)*px+u*w, y=F.top+(F.h-h)*py+v*h;
+  return {x:cl(540+(x-540)*1.03,90,990), y:cl(960+(y-960)*1.03,200,1720)};
 };
 const R = (a,b)=>a+Math.random()*(b-a);
 
@@ -38,7 +44,7 @@ export default function Scene({kind,stage,lvl,fade=.5,full}) {
       if(l>=2&&now>nextImp){imp.x=R(-1.2,1.2)*amp;imp.y=R(-.9,.9)*amp;imp.r=R(-1.2,1.2)*ramp;nextImp=now+(l===3?90:180)+R(0,120);}
       imp.x*=.86;imp.y*=.86;imp.r*=.86;
       const sx=amp*(Math.sin(t*w*7.3)*.6+Math.sin(t*w*11.1+1)*.4)+imp.x, sy=amp*.7*(Math.sin(t*w*8.7+2)*.6+Math.sin(t*w*13.3)*.4)+imp.y, sr=ramp*Math.sin(t*w*5.1)*.7+imp.r;
-      cam.current.style.transform=`translate(${sx+Math.sin(t*.35)*9}px,${sy+Math.cos(t*.27)*7}px) rotate(${sr}deg) scale(${1.1+.02*Math.sin(t*.2)+amp/900})`;
+      cam.current.style.transform=`translate(${sx+Math.sin(t*.35)*9}px,${sy+Math.cos(t*.27)*7}px) rotate(${sr}deg) scale(${1.03+.01*Math.sin(t*.2)+amp*.0024})`;
       cam.current.style.filter=amp>12?`blur(${(amp/38*1.8).toFixed(2)}px)`:'none';
       if(l>=1&&now>flkUntil&&Math.random()<(l>=2?.05:.01))flkUntil=now+60+R(0,140);
       flk.current.style.opacity=now<flkUntil?(.3+Math.random()*.5):0;
@@ -60,12 +66,15 @@ export default function Scene({kind,stage,lvl,fade=.5,full}) {
     };
     raf=requestAnimationFrame(loop); return()=>cancelAnimationFrame(raf);
   },[]);
-  const eff=IMG[kind][stage]?stage:'after';
+  const eff=IMG[kind][stage]?stage:'after'; const F=frameOf(kind,stage,full);
   return (
   <div className={'scene'+(full?' full':'')} style={{'--fade':fade+'s'}}>
     <div className="cam" ref={cam}>
+      <img alt="" className="bgfill" src={F.url} style={{opacity:full&&F.h<1920?1:0}}/>
+      <div className="frame" style={{top:F.top,height:F.h}}>
       {Object.keys(IMG).flatMap(k=>Object.keys(IMG[k]).map(s=>
         <img key={k+s} alt="" className={'layer'+(k===kind&&s===eff?' on':'')} src={IMG[k][s]} style={{objectPosition:POS[k+'_'+s]||'50% 50%'}}/>))}
+      </div>
     </div>
     <div className={'haze'+(eff==='before'?'':' show')}/>
     <canvas ref={cv} width="1080" height="1920" className="fx"/>

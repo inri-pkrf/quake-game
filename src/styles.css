@@ -4,7 +4,7 @@ html,body{height:100%;background:#000;overflow:hidden;font-family:"Heebo","Assis
 .stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;background:#07080a;overflow:hidden}
 .scene{position:absolute;left:0;top:130px;width:1080px;height:910px;overflow:hidden;background:#000;z-index:1;transition:top 1.3s cubic-bezier(.6,0,.2,1),height 1.3s cubic-bezier(.6,0,.2,1)}
 .scene.full{top:0;height:1920px}
-.cam{position:absolute;inset:-6%;will-change:transform}
+.cam{position:absolute;inset:0;will-change:transform}
 .layer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;z-index:0;transition:opacity var(--fade) ease var(--fade)}
 .layer.on{opacity:1;z-index:2;transition:opacity var(--fade) ease 0s}
 .fx{position:absolute;left:0;top:0;width:1080px;height:1920px;pointer-events:none}
@@ -19,10 +19,10 @@ html,body{height:100%;background:#000;overflow:hidden;font-family:"Heebo","Assis
 .playui{position:absolute;inset:0;z-index:4;transition:opacity .8s;pointer-events:auto}.playui.hide{opacity:0;pointer-events:none}
 .live{position:absolute;top:50px;left:50px;font-size:30px;color:#ddd;display:flex;align-items:center;gap:14px;letter-spacing:1px}
 .dot{width:16px;height:16px;border-radius:50%;background:#e0503f;animation:fl 1.2s infinite}
-.cap{position:absolute;bottom:420px;left:0;right:0;text-align:center;font-size:64px;font-weight:700;line-height:1.3;padding:0 70px;text-shadow:0 4px 28px #000,0 0 8px #000;animation:cin 1.2s both}
+.cap{position:absolute;bottom:250px;left:0;right:0;text-align:center;font-size:62px;font-weight:700;line-height:1.3;padding:0 70px;text-shadow:0 4px 28px #000,0 0 8px #000;animation:cin 1.2s both}
 @keyframes cin{from{opacity:0;transform:translateY(24px)}}
-.seisP{position:absolute;bottom:200px;left:50px;width:980px;height:150px;opacity:.9}
-.skip{position:absolute;bottom:60px;left:50px;font:inherit;font-size:28px;color:#aaa;background:rgba(0,0,0,.4);border:2px solid #555;border-radius:30px;padding:12px 40px}
+.seisP{position:absolute;bottom:60px;left:50px;width:980px;height:150px;opacity:.9}
+.skip{position:absolute;top:112px;left:50px;z-index:9;font:inherit;font-size:28px;color:#aaa;background:rgba(0,0,0,.4);border:2px solid #555;border-radius:30px;padding:12px 40px}
 .flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:15;pointer-events:none;transition:opacity .15s}.flash.on{opacity:.4}
 @keyframes fl{0%,100%{opacity:1}50%{opacity:.25}}
 .top{position:absolute;top:0;left:0;right:0;height:130px;padding:0 330px 0 50px;display:flex;align-items:center;justify-content:space-between;background:#0d1014;border-bottom:3px solid #b8892b;z-index:6;animation:slide .8s both}
@@ -49,8 +49,8 @@ html,body{height:100%;background:#000;overflow:hidden;font-family:"Heebo","Assis
 .sum{display:flex;flex-direction:column;gap:14px;align-items:center}
 .verdict{font-size:46px;font-weight:800;padding:12px 40px;border-radius:10px}.verdict.good{background:#1f6b43}.verdict.ok{background:#8a6a14}.verdict.bad{background:#8e2a21}
 .lessons{font-size:31px;line-height:1.4;width:100%}.lessons .good{color:#8fd1ac}.lessons .bad{color:#f0a198}.lessons div{margin:5px 0}
-.hs{position:absolute;width:100px;height:100px;z-index:8;background:none;border:0;animation:slide .8s 1.2s both}
-.hs i{position:absolute;left:30px;top:30px;width:40px;height:40px;border-radius:50%;background:rgba(201,162,39,.9);border:4px solid #fff;box-shadow:0 0 0 0 rgba(201,162,39,.7);animation:ping 1.8s infinite}
+.hs{position:absolute;width:120px;height:120px;z-index:8;background:none;border:0;animation:slide .8s 1.2s both}
+.hs i{position:absolute;left:34px;top:34px;width:52px;height:52px;border-radius:50%;background:rgba(201,162,39,.9);border:4px solid #fff;box-shadow:0 0 0 0 rgba(201,162,39,.7);animation:ping 1.8s infinite}
 .hs.seen i{background:rgba(63,157,102,.9);animation:none}
 @keyframes ping{70%{box-shadow:0 0 0 34px rgba(201,162,39,0)}100%{box-shadow:0 0 0 0 rgba(201,162,39,0)}}
 .hchip{position:absolute;top:960px;left:50px;z-index:8;font-size:28px;color:#fff;background:rgba(0,0,0,.6);border:2px solid #b8892b;border-radius:30px;padding:10px 26px;animation:slide .8s 1.4s both}
@@ -62,3 +62,11 @@ html,body{height:100%;background:#000;overflow:hidden;font-family:"Heebo","Assis
 .found{font-size:34px;line-height:1.4;padding:16px 24px;background:#12161b;border-right:6px solid #3f9d66;animation:slide .4s both}
 .found.pend{border-color:#444;color:#777;animation:none}
 .skip2{align-self:center;margin-top:auto;font:inherit;font-size:30px;color:#aaa;background:none;border:2px solid #444;border-radius:30px;padding:12px 44px}
+
+.frame{position:absolute;left:0;width:100%;overflow:hidden;transition:top 1.3s cubic-bezier(.6,0,.2,1),height 1.3s cubic-bezier(.6,0,.2,1),box-shadow 1s}
+.scene.full .frame{box-shadow:0 0 100px 60px rgba(0,0,0,.6)}
+.bgfill{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(38px) brightness(.45) saturate(.8);transform:scale(1.25);transition:opacity 1s}
+.hcard{position:absolute;width:480px;left:auto;right:auto;font-size:36px;line-height:1.4;font-weight:600;padding:22px 28px;background:rgba(8,10,13,.92);border-radius:10px;z-index:10;animation:slide .3s both}
+.hcard.rt{border-right:8px solid #c9a227}.hcard.lf{border-left:8px solid #c9a227}
+.scanui{position:absolute;inset:0;z-index:7;pointer-events:none}.scanui .skip{pointer-events:auto}
+.scap{position:absolute;bottom:120px;left:0;right:0;text-align:center;font-size:48px;font-weight:700;padding:0 80px;text-shadow:0 4px 24px #000}.scap span{color:#c9a227;margin-right:16px}
