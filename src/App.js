@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Scene, { project, ALL_URLS } from './Scene';
 import { S, START, endingFor } from './story';
 import { H } from './hotspots';
@@ -9,14 +9,14 @@ const IDLE = 120000, PUB = process.env.PUBLIC_URL, TMAX = 25; // TMAX = שניו
 const L = (t, stage, lvl) => ({ t, stage, lvl });
 const PLAN = {
   sRun:{s:[L(0,'before',1),L(1500,'mid',2),L(3300,'after',3)],d:7000},
-  sDoor:{s:[L(0,'before',1),L(1500,'mid',2),L(3200,'during',3)],d:6500},
-  s2:{s:[L(0,'after',1)],d:3200}, s3:{s:[L(0,'medic',0)],d:2200}, sMed:{s:[L(0,'medic',0)],d:1500},
+  sDoor:{s:[L(0,'before',1),L(1500,'door_mid',2),L(3200,'door_during',3)],d:6500},
+  s2:{s:[L(0,'after',1)],d:3200}, s2c:{s:[L(0,'cover',1)],d:3200}, sPhone:{s:[L(0,'phone',0)],d:2200}, s3:{s:[L(0,'medic',0)],d:2200}, sMed:{s:[L(0,'medic',0)],d:1500},
   sEvac:{s:[L(0,'after',0)],d:2200},
   sStairs:{s:[L(0,'before',0),L(1300,'mid',1),L(3000,'after',2),L(5000,'after',1)],d:6800},
   sOut:{s:[L(0,'mid',0),L(1800,'after',2),L(3600,'after',0)],d:5200}, sCount:{s:[L(0,'count',0),L(3000,'missing',0)],d:5200},
-  eBad1:{s:[L(0,'after',2)],d:4500}, eBad2:{s:[L(0,'before',0),L(1400,'after',3)],d:6500},
+  eBad1:{s:[L(0,'injured',2)],d:4500}, eBad2:{s:[L(0,'before',0),L(1400,'after',3)],d:6500},
   eBad3:{s:[L(0,'before',0),L(1300,'mid',1),L(2700,'debris',2),L(4100,'wall',3),L(5600,'after',3),L(7300,'collapse',3)],d:9800},
-  eBad4:{s:[L(0,'mid',0),L(1500,'after',3)],d:6500}, eMix:{s:[L(0,'rubble',0)],d:2500}};
+  eBad4:{s:[L(0,'mid',0),L(1500,'injured',3)],d:6500}, eMix:{s:[L(0,'alone',0)],d:2500}};
 const sceneOf = (id, risk) => id === 'final' ? {...S.sCount, ...endingFor(risk), o:null} : (S[id] || {});
 const planOf = (id, risk) => id === 'final' ? {s:[L(0, endingFor(risk).end === 'bad' ? 'missing' : 'gather', 0)], d:2500} : (PLAN[id] || {s:[L(0,'after',0)], d:1800});
 
@@ -113,11 +113,10 @@ export default function App() {
      <Scene kind="stairs" stage="after" lvl={tremor} fade={1} full drift lite={lite} />
      <div className="shade a" />
      <div className="atxt">
-      <div className="badge">הכשרת קב"טים · יום ממוקד רעידת אדמה</div>
       <h1><span>החלטה אחת</span><span className="g">משנה הכול</span></h1>
       <div className="rule" />
       <p>רעידת אדמה. שניות להחליט.</p>
-      <Seismo lvl={tremor} className="seisA" lite={lite} />
+      <Seismo lvl={tremor} className={'seisA' + (tremor ? '' : ' off')} lite={lite} />
       <button className="go"><span>לחצו להתחלה</span></button>
       <div className="hint">מומלץ להפעיל קול</div>
      </div>
@@ -126,25 +125,23 @@ export default function App() {
     <Scene kind={sc.kind} stage={stage} lvl={lvl} fade={fade} full={phase !== 'ask'} lite={lite} />
     <div className={'playui' + (phase === 'play' ? '' : ' hide')}>
       <div className="shade" />
-      <div className="live"><span className="dot" />מד רעידות · עוצמה <b>{['—','3.0','5.5','7.0'][lvl]}</b></div>
+      <div className={'live' + (lvl ? '' : ' off')}><span className="dot" />מד רעידות · עוצמה <b>{['3.0','3.0','5.5','7.0'][lvl]}</b></div>
       <div className="cap" key={cap}>{cap}</div>
-      {phase === 'play' && <Seismo lvl={lvl} className="seisP" lite={lite} />}
+      {phase === 'play' && <Seismo lvl={lvl} className={'seisP' + (lvl ? '' : ' off')} lite={lite} />}
     </div>
     <div className="flash" ref={flashEl} />
     {phase === 'scan' && <>
       {hs.map((h, i) => { const p = project(h.u, h.v); return <button key={i} className={'hs' + (seen[i] ? ' seen' : '')} style={{ left: p.x - 60, top: p.y - 60 }} onClick={() => openHs(i)}><i /></button>; })}
-      {card !== null && hs[card] && (() => { const p = project(hs[card].u, hs[card].v), rt = p.x > 540, st = { top: Math.max(160, Math.min(1600, p.y - 70)) };
-        if (rt) st.right = 1080 - p.x + 64; else st.left = p.x + 64;
-        return <div className={'hcard ' + (rt ? 'rt' : 'lf')} style={st} key={card} onClick={() => setCard(null)}>{hs[card].t}</div>; })()}
+      {card !== null && hs[card] && <HotCard key={card} p={project(hs[card].u, hs[card].v)} onClose={() => setCard(null)}>{hs[card].t}</HotCard>}
       {toast && <div className="toast">{toast}</div>}
-      <div className="scanui"><div className="shade" /><div className="scap">גע בנקודות הזהובות כדי לסרוק את הזירה <span>{cnt}/{hs.length}</span></div></div>
+      <div className="scanui"><div className="shade" /><div className="scap">תגעו בנקודות הזהובות כדי לסרוק את הזירה <span>{cnt}/{hs.length}</span></div></div>
     </>}
     {ask && <>
       <div className="top"><div className="ttl">{sc.title}</div><div className="sec">+{sc.sec} שנ' מתחילת הרעידה</div></div>
       <div className="hud"><span>רמת סיכון</span><div className="bar"><div style={{ transform: `scaleX(${Math.max(.001, risk / 100)})`, background: col }} /></div><b style={{ color: col }}>{risk}</b></div>
       <div className="panel in">
        {sc.o && left !== null && <div className={'tmr' + (left <= 7 ? ' low' : '')}><i key={id} style={{ animationDuration: TMAX + 's' }} /></div>}
-       {sc.o && <div className="q">מה אתה עושה? {left !== null && <span className={left <= 7 ? 'low' : ''}>{left}</span>}</div>}
+       {sc.o && <div className="q">מה אתם עושים? {left !== null && <span className={left <= 7 ? 'low' : ''}>{left}</span>}</div>}
        <p className="story">{sc.text}</p>
        {sc.o && sc.o.map((o, i) => <button key={i} className={'opt' + (pick === i ? ' picked' : '') + (pick !== null && pick !== i ? ' dim' : '')} onClick={() => choose(o, i)}><span className="num">{i + 1}</span><span>{o.t}</span></button>)}
        {sc.end && <Summary log={log} end={sc.end} risk={risk} again={reset} />}
@@ -155,6 +152,20 @@ export default function App() {
    </div>
    {debug && <div className="dbg">{window.innerWidth}×{window.innerHeight} · dpr {window.devicePixelRatio} · scale {box.s.toFixed(2)} · {fps} fps · {lite ? 'LITE' : 'FULL'}</div>}
   </div>);
+}
+// כרטיס הסבר: נמדד אחרי הציור ומוזז כך שלא ייחתך בשום צד, לא יכסה את הנקודה ולא את שורת ההנחיה התחתונה
+const CARD_W = 480, EDGE = 36, CARD_TOP = 250, CARD_BOTTOM = 1600;
+function HotCard({ p, onClose, children }) {
+  const el = useRef(), [pos, setPos] = useState(null);
+  useLayoutEffect(() => {
+    const h = el.current ? el.current.offsetHeight : 240;
+    const right = p.x > 540; // הנקודה בצד ימין: הכרטיס משמאלה
+    let left = right ? p.x - 56 - CARD_W : p.x + 56;
+    left = Math.max(EDGE, Math.min(1080 - EDGE - CARD_W, left));
+    const top = Math.max(CARD_TOP, Math.min(CARD_BOTTOM - h, p.y - h / 2));
+    setPos({ left, top, right });
+  }, [p.x, p.y]);
+  return <div ref={el} className={'hcard ' + (pos && pos.right ? 'rt' : 'lf')} style={{ width: CARD_W, left: pos ? pos.left : 0, top: pos ? pos.top : 0, visibility: pos ? 'visible' : 'hidden' }} onClick={onClose}>{children}</div>;
 }
 function Summary({ log, end, risk, again }) {
   const lab = {good:'ביצוע מצוין', ok:'ביצוע סביר, יש מה לשפר', bad:'נדרש תרגול נוסף'}[end];
