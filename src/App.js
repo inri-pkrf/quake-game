@@ -98,7 +98,15 @@ export default function App() {
   useEffect(() => { if (hs.length && hs.every((_, i) => seen[i]) && !award.current[id]) { award.current[id] = 1; setRisk(r => Math.max(0, r - 3)); setToast('סריקה מלאה · סיכון −3'); setTimeout(() => setToast(''), 2200); tScan.current = setTimeout(() => { A.alarm(0); setPhase('ask'); }, 3800); } }, [seen]); // eslint-disable-line
   useEffect(() => { if (phase !== 'scan') return; const t = setTimeout(() => { A.alarm(0); setPhase('ask'); }, 16000); return () => clearTimeout(t); }, [phase, seen, card]);
 
-  const start = () => { const q = new URLSearchParams(window.location.search); A.unlock(); setRisk(+q.get('risk') || 30); setLog([]); award.current = {}; setId(S[q.get('scene')] || q.get('scene') === 'final' ? q.get('scene') : START); };
+  const goFull = () => {
+    const el = document.documentElement;
+    try {
+      if (document.fullscreenElement || document.webkitFullscreenElement) return;
+      const r = (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
+      if (r && r.catch) r.catch(() => {});
+    } catch (err) { /* ignore */ }
+  };
+  const start = () => { const q = new URLSearchParams(window.location.search); goFull(); A.unlock(); setRisk(+q.get('risk') || 30); setLog([]); award.current = {}; setId(S[q.get('scene')] || q.get('scene') === 'final' ? q.get('scene') : START); };
   function choose(o, i) { if (pickRef.current) return; pickRef.current = true; setPick(i); setLeft(null); setCard(null); A.vib(40); setTimeout(() => {
     const nr = Math.max(0, Math.min(100, R.current + o.r)); setRisk(nr); setLog(l => [...l, {t: o.t, fb: o.fb, r: o.r}]);
     setId(o.n === 'END' ? 'final' : o.n); }, 900); }
